@@ -179,7 +179,7 @@ void loop()
     int retry = 120;
     while (WiFi.status() != WL_CONNECTED) {
         // flash_leds(2);  
-        delay(250);      
+        delay(500);      
         if (retry-- < 0) {
           goto done;
         }
