@@ -46,6 +46,8 @@ Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 #define LED_BUILTIN 13 // pin number is specific to your esp32 board
 #endif
 
+const char *copyright_notice = "Sophie Adams, Copyright June 6,2021, All Rights Reserved.";
+
 // UDS buffer for server messages
 String msg;
 
@@ -65,8 +67,8 @@ const char *hotspot_ssid      = "Livemeteors";
 const char *hotspot_password  = "LivemeteorsLivemeteors";
 const char *wifi_ssid         = "wca-goo";
 const char *wifi_password     = "pinheads1pinheads1";
-const char *ssid              = wifi_ssid;
-const char *password          = wifi_password;
+const char *ssid              = hotspot_ssid;
+const char *password          = hotspot_password;
  
 // SkyPipe server TCP connection information
 const char* host = "69.30.241.74";     // livemeteor website server
@@ -94,13 +96,20 @@ void neo_pixel_flash_on()
 
 //    Serial.print("randomPixel is ");
 //    Serial.println(randomPixel);
-    
-//    uint8_t r = random(0, 250);
-//    uint8_t g = random(0, 250);
-//    uint8_t b = random(0, 250);
-//    pixels.setPixelColor(p, pixels.Color(r, g, b));
+
+    uint8_t r = 128;
+    uint8_t g = 128;
+    uint8_t b = 128;
     uint8_t p = random(0, NUMPIXELS);
-    pixels.setPixelColor(p, pixels.Color(128, 128, 128));
+
+    if (randomizerEnabled == true)
+    {
+      r = random(0, 250);
+      g = random(0, 250);
+      b = random(0, 250);
+    }
+
+    pixels.setPixelColor(p, pixels.Color(r, g, b));
     pixels.show();   // Send the updated pixel colors to the hardware.
     delay(DELAYVAL); // Pause before next pass through loop
 }
@@ -154,13 +163,6 @@ void my_init()
 //    signal_aggregate = 0;
 //    signal_average = 0;
     available = 0;
-    
-//    usd_init[0] = 'I';
-//    usd_init[1] = 'N';
-//    usd_init[2] = 'I';
-//    usd_init[3] = 'T';
-//    usd_init[4] = 0xff;
-
 //    led_off();
     neo_pixel_flash_off();
 }
@@ -179,6 +181,7 @@ void setup()
 {
     Serial.begin(115200);
     delay(10);
+    Serial.println(copyright_notice);
    
   // These lines are specifically to support the Adafruit Trinket 5V 16 MHz.
   // Any other board, you can remove this part (but no harm leaving it):
@@ -192,11 +195,37 @@ void setup()
   randomSeed(analogRead(0));
 }
 
+void my_randomizer()
+{
+  if(randomizerEnabled == false)
+  {
+    return;
+  }
+
+  // spin here faking data for awhile, then retry normal path again
+  uint32_t strikes = random(5, 15);
+  uint32_t randomWaitMs = random(20000, 60000);
+  delay(randomWaitMs);
+
+  Serial.print(">>> RandomizerEnabled => wait time is ");
+  Serial.print(randomWaitMs);
+  Serial.print(", random srikes set to ");
+  Serial.println(strikes);
+  Serial.flush();
+  
+  for (int i = 0; i < strikes; i++)
+  {
+    neo_pixel_flash();
+  }
+}
+
 void loop()
 {
     do {
       my_init();
-     
+
+      my_randomizer();
+      
       Serial.print(">>> Trying to connect to network => ");
       Serial.println(ssid);
   
@@ -207,6 +236,7 @@ void loop()
           // flash_leds(2);  
           delay(500);      
           if (retry-- < 0) {
+            randomizerEnabled = true;
             goto done;
           }
           
@@ -236,9 +266,12 @@ void loop()
       if (!client.connect(host, port)) {
           Serial.print(">>> Failed to connect to host => ");
           Serial.println(host);
+          randomizerEnabled = true;
           goto done;
       }
   
+      randomizerEnabled = false;
+      
       Serial.print(">>> Connected to host => ");
       Serial.print(host);
       Serial.print(", port => ");
