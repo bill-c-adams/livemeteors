@@ -87,7 +87,7 @@ void neo_flash_on()
 
     // pixels.Color() takes RGB values, from 0,0,0 up to 255,255,255
     // Here we're using a moderately bright green color:
-    pixels.setPixelColor(i, pixels.Color(0, 150, 0));
+    pixels.setPixelColor(i, pixels.Color(128, 128, 128));
 
     pixels.show();   // Send the updated pixel colors to the hardware.
 
@@ -97,8 +97,11 @@ void neo_flash_on()
 
 void neo_flash_off()
 {
-  pixels.clear(); // Set all pixel colors to 'off'  // The first NeoPixel in a strand is #0, second is 1, all the way up  
+  for(int i=0; i<NUMPIXELS; i++) { // For each pixel...
+    pixels.setPixelColor(i, pixels.Color(0, 0, 0));
+  }
   pixels.show();   // Send the updated pixel colors to the hardware.
+  delay(DELAYVAL); // Pause before next pass through loop
 }
 
 void neo_flash()
@@ -257,7 +260,7 @@ void loop()
           // should be based upon a recent moving average threshold
           signal_aggregate += value;
           signal_average = signal_aggregate/message_count;
-          if ((value > (signal_average * 2.0)) && (message_count > skip_message_count)) {          
+          if ((value > (signal_average * 1.5)) && (message_count > skip_message_count)) {          
             meteor_strikes++;
             Serial.print(">>> msg no: ");
             Serial.print(message_count);
@@ -296,4 +299,5 @@ To do:
 - use default hotspot name/password for WiFi connectivity
 - sometimes wifi or hotspot connectivity fails and only way to recover is to re-download uProcessor
    - how can I emulate that??
+- randomly light up a different neo-pixel per strike
 #endif // NOTES
