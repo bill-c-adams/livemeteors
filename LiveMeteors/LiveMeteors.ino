@@ -49,6 +49,8 @@ Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 String msg;
 char pipe_init[5];
 int available = 0;
+unsigned long strike_factor = 2.0;
+unsigned int neo_pixel_flash_count = 5;
 
 char *hotspot_ssid      = "Livemeteors";
 char *hotspot_password  = "LivemeteorsLivemeteors";
@@ -106,7 +108,7 @@ void neo_flash_off()
 
 void neo_flash()
 {
-  for (int i = 0; i < 10; i++)
+  for (int i = 0; i < neo_pixel_flash_count; i++)
   {
     neo_flash_on();
     neo_flash_off();
@@ -233,7 +235,7 @@ void loop()
     do {
         while ((available = client.available()) == 0) {
           // led_off();
-          delay(10);
+          delay(1);
           if (client.connected() == 0) {
             Serial.print(">>> Lost my connection to host => ");
             Serial.println(host);
@@ -260,7 +262,7 @@ void loop()
           // should be based upon a recent moving average threshold
           signal_aggregate += value;
           signal_average = signal_aggregate/message_count;
-          if ((value > (signal_average * 1.5)) && (message_count > skip_message_count)) {          
+          if ((value > (signal_average * strike_factor)) && (message_count > skip_message_count)) {          
             meteor_strikes++;
             Serial.print(">>> msg no: ");
             Serial.print(message_count);
