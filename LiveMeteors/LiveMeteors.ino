@@ -419,11 +419,8 @@ done:
 
 #ifdef NOTES
 To do:
-- setup an array of hosts/ports to iterate through until can connect
-- if no servers are available, generate random numbers to simulate a meteor strike every randome number time interval
 - email webmaster that server is down
 - use default hotspot name/password for WiFi connectivity
 - sometimes wifi or hotspot connectivity fails and only way to recover is to re-download uProcessor
    - how can I emulate that??
-- randomly light up a different neo-pixel per strike
 #endif // NOTES
