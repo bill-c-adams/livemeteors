@@ -52,16 +52,17 @@ const char *copyright_notice = "Sophie Adams, Copyright June 6,2021, All Rights 
 String msg;
 
 // UDS client messages
-const char usd_init[] = {'I', 'N', 'I', 'T', 0xff}; // UDS init 
-const char usd_poll[] = {'P', 'O', 'L', 'L', 0xff}; // We want to use poll mode to get data
-const char usd_getc[] = {'G', 'E', 'T', 'C', 0xff}; // Get number of data channels
-const char usd_stat[] = {'S', 'T', 'A', 'T', 0xff}; // Let UDS server get ready to start data stream
-const char usd_getd[] = {'G', 'E', 'T', 'D', 0xff}; // Poll for data
+const char uds_init[] = {'I', 'N', 'I', 'T', 0xff}; // US init 
+const char uds_poll[] = {'P', 'O', 'L', 'L', 0xff}; // We want to use poll mode to get data
+const char uds_getc[] = {'G', 'E', 'T', 'C', 0xff}; // Get number of data channels
+const char uds_stat[] = {'S', 'T', 'A', 'T', 0xff}; // Let UDS server get ready to start data stream
+const char uds_getd[] = {'G', 'E', 'T', 'D', 0xff}; // Poll for data
 
 int available = 0;
 unsigned long strike_factor = 2.1;
 unsigned int neo_pixel_flash_count = 5;
 uint64_t restarts = 0;
+uint32_t wifi_connect_retries = 30;
 
 const char *hotspot_ssid      = "Livemeteors";
 const char *hotspot_password  = "LivemeteorsLivemeteors";
@@ -87,7 +88,7 @@ bool randomizerEnabled = false;
 // Use WiFiClient class to create TCP connections
 WiFiClient client;
 
-int led_is_on = 0;      
+int onboard_led_is_on = 0;      
 
 void neo_pixel_flash_on()
 {
@@ -132,28 +133,28 @@ void neo_pixel_flash()
   }
 }
 
-void led_on()
+void onboard_led_on()
 {
   digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-  led_is_on = 1;      
+  onboard_led_is_on = 1;      
 }
 
-void led_off()
+void onboard_led_off()
 {
   digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
-  delay(10);
-  led_is_on = 0;
+  delay(2);
+  onboard_led_is_on = 0;
 }
 
-void flash_leds(int count)
+void onboard_led_flash(int count)
 {
   int i = count;
   while(i-- > 0) 
   {
-    led_on();
-    delay(500);
-    led_off();
-    delay(500);
+    onboard_led_on();
+    delay(250);
+    onboard_led_off();
+    delay(250);
   }
 }
 
@@ -163,13 +164,13 @@ void my_init()
 //    signal_aggregate = 0;
 //    signal_average = 0;
     available = 0;
-//    led_off();
+    onboard_led_off();
     neo_pixel_flash_off();
 }
 
 void my_cleanup()
 {
-    // led_off();
+    onboard_led_off();
     neo_pixel_flash_off();
     Serial.print(">>> Closing connection to host => ");
     Serial.println(host);
@@ -181,7 +182,11 @@ void setup()
 {
     Serial.begin(115200);
     delay(10);
+    Serial.flush();
     Serial.println(copyright_notice);
+
+    // init onboard led
+    pinMode(LED_BUILTIN, OUTPUT);
    
   // These lines are specifically to support the Adafruit Trinket 5V 16 MHz.
   // Any other board, you can remove this part (but no harm leaving it):
@@ -202,20 +207,24 @@ void my_randomizer()
     return;
   }
 
+  onboard_led_flash(5);
+  onboard_led_on();
+  
   // spin here faking data for awhile, then retry normal path again
   uint32_t strikes = random(5, 15);
   uint32_t randomWaitMs = random(20000, 60000);
-  delay(randomWaitMs);
-
+ 
   Serial.print(">>> RandomizerEnabled => wait time is ");
-  Serial.print(randomWaitMs);
-  Serial.print(", random srikes set to ");
+  Serial.print(randomWaitMs/1000);
+  Serial.print(" (seconds), random srikes set to ");
   Serial.println(strikes);
   Serial.flush();
   
-  for (int i = 0; i < strikes; i++)
+ delay(randomWaitMs);
+ for (int i = 0; i < strikes; i++)
   {
     neo_pixel_flash();
+    onboard_led_flash(1);
   }
 }
 
@@ -231,11 +240,10 @@ void loop()
   
       // connect to wifi network first
       WiFi.begin(ssid, password);
-      int retry = 120;
+      int32_t retry = wifi_connect_retries;
       while (WiFi.status() != WL_CONNECTED) {
-          // flash_leds(2);  
-          delay(500);      
-          if (retry-- < 0) {
+          delay(250);      
+          if (retry-- <= 0) {
             randomizerEnabled = true;
             goto done;
           }
@@ -248,7 +256,7 @@ void loop()
       }
   
       Serial.println();
-      //led_on();
+      onboard_led_on();
       Serial.print(">>> Connected to network => ");
       Serial.println(ssid);
       Serial.print(">>> My IP address is => ");
@@ -272,6 +280,8 @@ void loop()
   
       randomizerEnabled = false;
       
+      onboard_led_on();
+      
       Serial.print(">>> Connected to host => ");
       Serial.print(host);
       Serial.print(", port => ");
@@ -281,14 +291,14 @@ void loop()
       Serial.print(">>> Sending init string to host => ");
       Serial.println(host);    
 
-//      for (int i = 0; i < sizeof(usd_init); i++) {
-//        Serial.print(usd_init[i], HEX);
+//      for (int i = 0; i < sizeof(uds_init); i++) {
+//        Serial.print(uds_init[i], HEX);
 //        Serial.print(" ");
 //      }
 //      Serial.println();
 
-       bytes_sent = client.write(usd_init, sizeof(usd_init));
-       if (bytes_sent != sizeof(usd_init))
+       bytes_sent = client.write(uds_init, sizeof(uds_init));
+       if (bytes_sent != sizeof(uds_init))
        {
         Serial.print(">>> INIT msg bytes sent (not equal to message size): ");
         Serial.println(bytes_sent);
@@ -331,8 +341,8 @@ void loop()
       } while(true);
 
       // POLL for data
-      bytes_sent = client.write(usd_poll, sizeof(usd_poll));
-      if (bytes_sent != sizeof(usd_poll))
+      bytes_sent = client.write(uds_poll, sizeof(uds_poll));
+      if (bytes_sent != sizeof(uds_poll))
       {
         Serial.print(">>> POLL msg bytes sent (not equal to message size): ");
         Serial.println(bytes_sent);
@@ -341,14 +351,14 @@ void loop()
       // Read messages from server 
       do {
           while ((available = client.available()) == 0) {
-            // led_off();
+            onboard_led_off();
             delay(5);
             if (client.connected() == 0) {
               Serial.print(">>> Lost my connection to host => ");
               Serial.println(host);
               goto done;
             }
-            // led_on();
+            onboard_led_on();
           } 
   
           // read next message from server
@@ -409,11 +419,8 @@ done:
 
 #ifdef NOTES
 To do:
-- setup an array of hosts/ports to iterate through until can connect
-- if no servers are available, generate random numbers to simulate a meteor strike every randome number time interval
 - email webmaster that server is down
 - use default hotspot name/password for WiFi connectivity
 - sometimes wifi or hotspot connectivity fails and only way to recover is to re-download uProcessor
    - how can I emulate that??
-- randomly light up a different neo-pixel per strike
 #endif // NOTES
