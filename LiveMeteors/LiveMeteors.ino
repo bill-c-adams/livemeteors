@@ -351,7 +351,6 @@ void loop()
       // Read messages from server 
       do {
           while ((available = client.available()) == 0) {
-            onboard_led_off();
             delay(5);
             if (client.connected() == 0) {
               Serial.print(">>> Lost my connection to host => ");
