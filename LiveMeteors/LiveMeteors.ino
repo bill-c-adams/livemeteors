@@ -12,7 +12,7 @@
 #define PIN        25 // On Trinket or Gemma, suggest changing this to 1
 
 // How many NeoPixels are attached to the Arduino?
-#define NUMPIXELS 4 // Popular NeoPixel ring size
+#define NUMPIXELS 20 // Popular NeoPixel ring size
 
 // When setting up the NeoPixel library, we tell it how many pixels,
 // and which pin to use to send signals. Note that for older NeoPixel
@@ -68,9 +68,17 @@ const char *hotspot_ssid      = "Livemeteors";
 const char *hotspot_password  = "LivemeteorsLivemeteors";
 const char *wifi_ssid         = "wca-goo";
 const char *wifi_password     = "pinheads1pinheads1";
-const char *ssid              = hotspot_ssid;
-const char *password          = hotspot_password;
- 
+
+// Uncomment next line if using "hot spot"
+#define USE_HOTSPOT
+#ifdef USE_HOTSPOT
+  const char *ssid              = hotspot_ssid;
+  const char *password          = hotspot_password;
+#else
+  const char *ssid              = wifi_ssid;
+  const char *password          = wifi_password;
+#endif // USE_HOT_SPOT
+
 // SkyPipe server TCP connection information
 const char* host = "69.30.241.74";     // livemeteor website server
 const int port = 6300;                        // TCP port for skypipe servers
@@ -126,6 +134,10 @@ void neo_pixel_flash_off()
 
 void neo_pixel_flash()
 {
+  if (randomizerEnabled == true) {
+    Serial.println("randomizerEnabled is True!\n");
+  }
+
   for (int i = 0; i < neo_pixel_flash_count; i++)
   {
     neo_pixel_flash_on();
@@ -351,7 +363,6 @@ void loop()
       // Read messages from server 
       do {
           while ((available = client.available()) == 0) {
-            onboard_led_off();
             delay(5);
             if (client.connected() == 0) {
               Serial.print(">>> Lost my connection to host => ");
